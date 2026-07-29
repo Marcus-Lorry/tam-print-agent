@@ -1,0 +1,10 @@
+{
+  "port": 17777,
+  "allowed_origin": "https://admin.shazada.example.com",
+  "chars_per_line": 42,
+  "printer": {
+    "mode": "usb",
+    "usb": { "vendor_id": "0x0483", "product_id": "0x5743" },
+    "network": { "host": "192.168.1.50", "port": 9100 }
+  }
+}

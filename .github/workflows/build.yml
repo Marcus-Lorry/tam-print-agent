@@ -1,4 +1,4 @@
-name: build-agent
+name: build-shazada-agent
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -8,10 +8,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install pywin32 pyinstaller
-      - run: python agent.py --selftest
-      - run: pyinstaller --onefile --noconsole --name print-agent agent.py
+      - run: pip install -r requirements.txt pyinstaller
+      - run: python -c "import agent"   # smoke: imports resolve (agent + printer)
+      - run: pyinstaller build.spec
       - uses: actions/upload-artifact@v4
         with:
-          name: print-agent-exe
-          path: dist/print-agent.exe
+          name: shazada-print-agent-exe
+          path: dist/shazada-print-agent.exe

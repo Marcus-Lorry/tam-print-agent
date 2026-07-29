@@ -1,5 +1,6 @@
+config.json
+certs/
 __pycache__/
+*.pyc
 build/
 dist/
-*.spec
-agent_out.bin
