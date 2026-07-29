@@ -9,9 +9,12 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt pyinstaller
-      - run: python -c "import agent"   # smoke: imports resolve (agent + printer)
+      - run: python -c "import agent"
       - run: pyinstaller build.spec
+      - run: copy INSTALL.md dist\INSTALL.md
       - uses: actions/upload-artifact@v4
         with:
-          name: shazada-print-agent-exe
-          path: dist/shazada-print-agent.exe
+          name: shazada-print-agent
+          path: |
+            dist/shazada-print-agent.exe
+            dist/INSTALL.md
