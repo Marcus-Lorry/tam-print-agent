@@ -11,10 +11,14 @@ jobs:
       - run: pip install -r requirements.txt pyinstaller
       - run: python -c "import agent"
       - run: pyinstaller build.spec
+      # config.example.json must ship NEXT TO the exe: base_dir() reads it from the
+      # exe's folder on first run, not from the PyInstaller bundle.
       - run: copy INSTALL.md dist\INSTALL.md
+      - run: copy config.example.json dist\config.example.json
       - uses: actions/upload-artifact@v4
         with:
           name: shazada-print-agent
           path: |
             dist/shazada-print-agent.exe
             dist/INSTALL.md
+            dist/config.example.json
