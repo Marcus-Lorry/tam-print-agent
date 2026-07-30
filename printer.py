@@ -48,6 +48,45 @@ class ReceiptPrinter:
     def _rule(self, p):
         p.textln("-" * self.chars_per_line)
 
+    def _wrap(self, text: str):
+        """Word-wrap a line to the printer width so it never overflows into an
+        ugly mid-word wrap done by the printer's own firmware."""
+        text = str(text)
+        if len(text) <= self.chars_per_line:
+            return [text]
+        out, cur = [], ""
+        for word in text.split(" "):
+            if not cur:
+                cur = word
+            elif len(cur) + 1 + len(word) <= self.chars_per_line:
+                cur += " " + word
+            else:
+                out.append(cur)
+                cur = word
+            # a single word longer than the line: hard-split it
+            while len(cur) > self.chars_per_line:
+                out.append(cur[: self.chars_per_line])
+                cur = cur[self.chars_per_line:]
+        if cur:
+            out.append(cur)
+        return out
+
+    def _item(self, p, index, title, meta="", qty="", price=""):
+        """One invoice line item across (up to) two rows, sized to the paper:
+        line 1 = "N. Title .......... Price" (title truncated so it never wraps),
+        line 2 = "   Qty · #Barcode"  (the details, indented). Because the items
+        table has 5-6 columns it can't fit legibly on one 42/48-char line."""
+        head = (f"{index}. " if str(index).strip() else "") + str(title).strip()
+        price = str(price).strip()
+        room = self.chars_per_line - len(price) - 1
+        if room > 3 and len(head) > room:
+            head = head[: room - 2].rstrip() + ".."
+        p.textln(self._line(head, price))
+        details = " · ".join(x for x in (str(qty).strip(), (f"#{meta}".strip() if str(meta).strip() else "")) if x)
+        if details:
+            for ln in self._wrap("   " + details):
+                p.textln(ln)
+
     def _render(self, p, data: dict) -> None:
         p.set(align="center", bold=True)
         p.textln("SHAZADA")
@@ -86,8 +125,23 @@ class ReceiptPrinter:
         p.set(bold=True)
         p.textln(data["items_section_title"])
         p.set(bold=False)
+        is_custom = data.get("is_custom", False)
+        usd = data.get("usd", False)
         for row in data["items"]["rows"]:
-            p.textln(" | ".join(str(cell) for cell in row))
+            row = [str(c) for c in row]
+            if is_custom:
+                # custom row: [idx, title, "qty unit", price...] where price is
+                # one cell ($usd) or two cells (tmt, cny).
+                index, title, qty = row[0], row[1], row[2]
+                prices = row[3:]
+                price = prices[0] if usd else (f"{prices[0]}TMT/{prices[1]}¥" if len(prices) >= 2 else "".join(prices))
+                meta = ""
+            else:
+                # non-custom row: [idx, barcode, type, unit, qty, price].
+                index, barcode, typ, unit, qty_raw, price = (row + [""] * 6)[:6]
+                title, meta = typ, barcode
+                qty = f"{qty_raw} {unit}".strip()
+            self._item(p, index, title, meta, qty, price)
 
         self._rule(p)
 
@@ -111,9 +165,11 @@ class ReceiptPrinter:
             p.set(bold=True)
             p.textln(note["label"])
             p.set(bold=False)
-            p.textln(note["text"])
+            for ln in self._wrap(note["text"]):
+                p.textln(ln)
 
         self._rule(p)
         p.set(align="center", bold=False)
         for line in data["footer"]:
-            p.textln(line)
+            for ln in self._wrap(line):
+                p.textln(ln)
